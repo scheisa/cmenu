@@ -1,0 +1,10 @@
+IndentWidth: 4
+
+AlwaysBreakAfterReturnType: All
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterClass: false
+    AfterControlStatement: false
+    AfterFunction: true
+
