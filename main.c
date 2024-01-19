@@ -31,13 +31,14 @@ HWND *items_hwnd = NULL;
 const unsigned int CHUNK = 512;
 unsigned int items_capacity = CHUNK;
 
-int unsigned selected_index = 0;
+unsigned int selected_index = 0;
 
 // colors
 int accent_color, bg_color, fg_color_norm, fg_color_sel;
 
 // prompt
-int prompt = 1;
+wchar_t **prompt = &prompt_text;
+wchar_t *prompt_w;
 // size of something
 struct tagSIZE prompt_size, letter_size;
 
@@ -177,6 +178,8 @@ free_items(void)
     free(items_hwnd);
 
     free(matched_items);
+
+    free(prompt_w);
 }
 
 void
@@ -204,7 +207,7 @@ void
 move_selection_down(void)
 {
     item *items_to_display;
-    int amount_of_items;
+    unsigned int amount_of_items;
 
     size_t input_len = GetWindowTextLengthA(input_field);
     if (input_len == 0) {
@@ -233,7 +236,7 @@ void
 move_selection_up(void)
 {
     item *items_to_display;
-    int amount_of_items;
+    unsigned int amount_of_items;
 
     size_t input_len = GetWindowTextLengthA(input_field);
     if (input_len == 0) {
@@ -333,13 +336,10 @@ place_controls(HWND hwnd)
     SelectObject(hdc, font);
     GetTextExtentPoint32A(hdc, "a", 1, &letter_size);
 
-    if (prompt) {
-        GetTextExtentPoint32A(hdc, prompt_text, strlen(prompt_text),
-                              &prompt_size);
-        prompt_c = CreateWindow("Static", prompt_text, WS_CHILD | WS_VISIBLE, 0,
-                                0, prompt_size.cx, letter_size.cy, hwnd,
-                                (HMENU)1, NULL, NULL);
-    }
+    GetTextExtentPoint32W(hdc, *prompt, wcslen(*prompt), &prompt_size);
+    prompt_c = CreateWindowW(L"Static", *prompt, WS_CHILD | WS_VISIBLE, 0, 0,
+                             prompt_size.cx, letter_size.cy, hwnd, (HMENU)1,
+                             NULL, NULL);
 
     items_hwnd = malloc(sizeof(HWND) * lines);
     if (items_hwnd == NULL)
@@ -516,7 +516,7 @@ read_stdin()
         die("ERROR", "unable to allocate memory", 0);
 
     // if nothing was piped
-     if (_isatty(_fileno(stdin))) {
+    if (_isatty(_fileno(stdin))) {
         free_items();
         usage();
     }
@@ -561,9 +561,14 @@ main(int argc, char *argv[])
         else if (i + 1 == argc)
             usage();
         // flags with parameters
-        else if (!strcmp(argv[i], "-p"))
-            prompt_text = argv[++i];
-        else if (!strcmp(argv[i], "-l")) {
+        else if (!strcmp(argv[i], "-p")) {
+            char *prompt_arg = argv[++i];
+            prompt_w = malloc(sizeof(wchar_t) * strlen(prompt_arg));
+            if (prompt_w == NULL)
+                die("ERROR", "unable to allocate memory", 1);
+            if (mbstowcs(prompt_w, prompt_arg, 4) > 0)
+                prompt = &prompt_w;
+        } else if (!strcmp(argv[i], "-l")) {
             // if cannot be converted to integer use standart value from config
             lines = convert_arg_to_int(argv[++i], lines);
         } else if (!strcmp(argv[i], "-f")) {
