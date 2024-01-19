@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include <windows.h>
 #include <windowsx.h>
 #include <wingdi.h>
@@ -38,7 +39,7 @@ int accent_color, bg_color, fg_color_norm, fg_color_sel;
 
 // prompt
 wchar_t **prompt = &prompt_text;
-wchar_t *prompt_w;
+wchar_t *prompt_w = NULL;
 // size of something
 struct tagSIZE prompt_size, letter_size;
 
@@ -564,10 +565,12 @@ main(int argc, char *argv[])
         else if (!strcmp(argv[i], "-p")) {
             char *prompt_arg = argv[++i];
             prompt_w = malloc(sizeof(wchar_t) * strlen(prompt_arg));
+
             if (prompt_w == NULL)
                 die("ERROR", "unable to allocate memory", 1);
-            if (mbstowcs(prompt_w, prompt_arg, 4) > 0)
+            if (mbstowcs(prompt_w, prompt_arg, strlen(prompt_arg) + 1) > 0)
                 prompt = &prompt_w;
+
         } else if (!strcmp(argv[i], "-l")) {
             // if cannot be converted to integer use standart value from config
             lines = convert_arg_to_int(argv[++i], lines);
