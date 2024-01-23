@@ -1,7 +1,10 @@
-//#ifndef UTILS_H
-//#define UTILS_H
+// #ifndef UTILS_H
+// #define UTILS_H
 
 // keycodes
+#include <stdio.h>
+#include <stdlib.h>
+
 #define ESC 27
 #define ENTR 13
 #define CTRL 17
@@ -12,25 +15,29 @@
 #define LEFT_BRACKET 219
 #define H 72
 
-#define VERSION "0.0.0"
-
-#include <stdio.h>
-#include <stdlib.h>
+#define VERSION "0.0.1"
 
 void
-die(char *prefix, char *msg, int exit_code) {
+die(char *prefix, char *msg, int exit_code)
+{
     fprintf(stderr, "[%s]: %s\n", prefix, msg);
     exit(exit_code);
 }
 
-int
-convert_arg_to_int(char *arg, int def_arg)
+void
+usage_short(void)
 {
-    int converted_arg = atoi(arg);
+    die("USAGE", "cmenu [-vi] [-p prompt] [-l lines] [-f font size]", 0);
+}
+
+int
+convert_arg_to_int(wchar_t *arg, int def_arg)
+{
+    int converted_arg = _wtoi(arg);
     if (converted_arg <= 0)
         return def_arg;
     else
         return converted_arg;
 }
 
-//#endif // UTILS_H
+// #endif // UTILS_H

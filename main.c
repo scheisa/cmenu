@@ -1,4 +1,5 @@
 #include <io.h>
+#include <locale.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@ int screen_width, win_height;
 
 // items
 typedef struct {
-    char *str;
+    wchar_t *str;
     int substr_index;
 } item;
 item *matched_items = NULL;
@@ -39,7 +40,6 @@ int accent_color, bg_color, fg_color_norm, fg_color_sel;
 
 // prompt
 wchar_t **prompt = &prompt_text;
-wchar_t *prompt_w = NULL;
 // size of something
 struct tagSIZE prompt_size, letter_size;
 
@@ -69,16 +69,16 @@ void
 draw_matched_items(void)
 {
     for (unsigned int i = 0; i < matched_items_amount; i++)
-        SetWindowTextA(items_hwnd[i], matched_items[i].str);
+        SetWindowTextW(items_hwnd[i], matched_items[i].str);
     for (unsigned int i = matched_items_amount; i < lines; i++)
-        SetWindowTextA(items_hwnd[i], "");
+        SetWindowTextW(items_hwnd[i], L"");
 }
 
 void
 draw_blank_items()
 {
     for (unsigned int i = 0; i < lines; i++) {
-        SetWindowTextA(items_hwnd[i], "");
+        SetWindowTextW(items_hwnd[i], L"");
     }
 }
 
@@ -86,12 +86,12 @@ void
 draw_def_items()
 {
     for (unsigned int i = 0; i < lines; i++) {
-        SetWindowTextA(items_hwnd[i], items[i].str);
+        SetWindowTextW(items_hwnd[i], items[i].str);
     }
 }
 
 int
-match(char *input)
+match(wchar_t *input)
 {
     int input_len = GetWindowTextLengthA(input_field);
     char buffer[input_len];
@@ -101,9 +101,9 @@ match(char *input)
     for (unsigned int i = 0; i < items_amount; i++) {
         // TODO: some fix for case insensitivity option (items are displayed in
         // lowercase after applying of this)
-        char *substr = (case_sensitive)
-                           ? strstr(items[i].str, input)
-                           : strstr(_strlwr(items[i].str), _strlwr(input));
+        wchar_t *substr = (case_sensitive)
+                              ? wcsstr(items[i].str, input)
+                              : wcsstr(wcslwr(items[i].str), wcslwr(input));
 
         if (substr != NULL) {
             int substr_index = substr - items[i].str;
@@ -179,8 +179,6 @@ free_items(void)
     free(items_hwnd);
 
     free(matched_items);
-
-    free(prompt_w);
 }
 
 void
@@ -193,13 +191,13 @@ quit(void)
 void
 return_selection(void)
 {
-    char *selected_str;
+    wchar_t *selected_str;
     if (matched_items_amount > 0)
         selected_str = matched_items[selected_index].str;
     else
         selected_str = items[selected_index].str;
 
-    fprintf(stdout, "%s\n", selected_str);
+    fprintf(stdout, "%ls\n", selected_str);
     quit();
 }
 
@@ -224,10 +222,10 @@ move_selection_down(void)
         selected_index++;
         for (unsigned int i = 0; i < lines; i++) {
             if ((selected_index + i) < amount_of_items) {
-                SetWindowTextA(items_hwnd[i],
+                SetWindowTextW(items_hwnd[i],
                                items_to_display[(selected_index + i)].str);
             } else {
-                SetWindowTextA(items_hwnd[i], "");
+                SetWindowTextW(items_hwnd[i], L"");
             }
         }
     }
@@ -253,10 +251,10 @@ move_selection_up(void)
         selected_index--;
         for (unsigned int i = 0; i < lines; i++) {
             if ((selected_index + i) < amount_of_items) {
-                SetWindowTextA(items_hwnd[i],
+                SetWindowTextW(items_hwnd[i],
                                items_to_display[(selected_index + i)].str);
             } else {
-                SetWindowTextA(items_hwnd[i], "");
+                SetWindowTextW(items_hwnd[i], L"");
             }
         }
     }
@@ -348,15 +346,15 @@ place_controls(HWND hwnd)
 
     // creating static controls
     for (unsigned int i = 0; i < lines; i++) {
-        items_hwnd[i] = CreateWindow(
-            "Static", items[i].str, WS_CHILD | WS_VISIBLE, prompt_size.cx + 0,
+        items_hwnd[i] = CreateWindowW(
+            L"Static", items[i].str, WS_CHILD | WS_VISIBLE, prompt_size.cx + 0,
             letter_size.cy + letter_size.cy * i, screen_width, letter_size.cy,
             hwnd, (HMENU)1, NULL, NULL);
     }
 
     input_field =
-        CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE, prompt_size.cx + 0, 0,
-                     screen_width, letter_size.cy, hwnd, NULL, NULL, NULL);
+        CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE, prompt_size.cx + 0,
+                      0, screen_width, letter_size.cy, hwnd, NULL, NULL, NULL);
 
     // setting font for all child windows
     EnumChildWindows(hwnd, (WNDENUMPROC)set_font, (LPARAM)font);
@@ -422,11 +420,11 @@ win_proc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
             size_t input_len = GetWindowTextLengthA(input_field);
 
             if (input_len > 0) {
-                char *buffer = malloc(input_len + 1);
-                GetWindowText(input_field, buffer, input_len + 1);
+                wchar_t *buffer = malloc(input_len + 1);
+                GetWindowTextW(input_field, buffer, input_len + 1);
 
                 if (match(buffer) < 0)
-                    printf("%s\n", buffer);
+                    printf("%ls\n", buffer);
 
                 // if nothing was matched
                 if (matched_items_amount == 0) {
@@ -469,8 +467,8 @@ draw_window()
     }
 
     // creating the window
-    hwnd = CreateWindowEx(WS_EX_TOOLWINDOW, class_name, "", WS_OVERLAPPEDWINDOW,
-                          0, 0, 0, 0, NULL, NULL, NULL, NULL);
+    hwnd = CreateWindowExW(WS_EX_TOOLWINDOW, L"cmenu", L"", WS_OVERLAPPEDWINDOW,
+                           0, 0, 0, 0, NULL, NULL, NULL, NULL);
     if (hwnd == NULL) {
         die("ERROR", "unable to create a window", 1);
     }
@@ -499,18 +497,12 @@ draw_window()
     }
 }
 
-void
-usage(void)
-{
-    die("USAGE", "cmenu [-vif] [-p prompt] [-l lines]", 0);
-}
-
 // TODO: move?
 void
 read_stdin()
 {
     const size_t max_buffer_len = 256;
-    char buffer[max_buffer_len];
+    wchar_t buffer[max_buffer_len];
 
     items = malloc(sizeof(item) * CHUNK);
     if (items == NULL)
@@ -519,11 +511,11 @@ read_stdin()
     // if nothing was piped
     if (_isatty(_fileno(stdin))) {
         free_items();
-        usage();
+        usage_short();
     }
 
-    while (fgets(buffer, max_buffer_len, stdin) != NULL) {
-        int buffer_len = strlen(buffer);
+    while (fgetws(buffer, max_buffer_len, stdin) != NULL) {
+        int buffer_len = wcslen(buffer);
         if (buffer[buffer_len - 1] == '\n')
             buffer[buffer_len - 1] = '\0';
 
@@ -533,7 +525,7 @@ read_stdin()
         }
 
         items[items_amount].str = malloc(sizeof(char *) * buffer_len);
-        strcpy(items[items_amount].str, buffer);
+        wcscpy(items[items_amount].str, buffer);
         items_amount++;
     }
 
@@ -543,8 +535,10 @@ read_stdin()
 }
 
 int
-main(int argc, char *argv[])
+wmain(int argc, wchar_t *argv[])
 {
+    setlocale(LC_ALL, "en_US.UTF-8");
+
     // colors
     bg_color = hex_to_rgb(SchemeNorm);
     accent_color = hex_to_rgb(SchemeSel);
@@ -555,30 +549,23 @@ main(int argc, char *argv[])
 
     // parsing flags
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-v"))
+        if (!wcscmp(L"-v", argv[i]))
             die("VERSION", VERSION, 0);
-        if (!strcmp(argv[i], "-i"))
+        if (!wcscmp(L"-i", argv[i]))
             case_sensitive = 0;
         else if (i + 1 == argc)
-            usage();
-        // flags with parameters
-        else if (!strcmp(argv[i], "-p")) {
-            char *prompt_arg = argv[++i];
-            prompt_w = malloc(sizeof(wchar_t) * strlen(prompt_arg));
-
-            if (prompt_w == NULL)
-                die("ERROR", "unable to allocate memory", 1);
-            if (mbstowcs(prompt_w, prompt_arg, strlen(prompt_arg) + 1) > 0)
-                prompt = &prompt_w;
-
-        } else if (!strcmp(argv[i], "-l")) {
+            usage_short();
+        // flags with parametrs
+        else if (!wcscmp(argv[i], L"-p")) {
+            prompt = &argv[++i];
+        } else if (!wcscmp(argv[i], L"-l")) {
             // if cannot be converted to integer use standart value from config
             lines = convert_arg_to_int(argv[++i], lines);
-        } else if (!strcmp(argv[i], "-f")) {
+        } else if (!wcscmp(argv[i], L"-f")) {
             // if cannot be converted to integer use standart value from config
             font_size = convert_arg_to_int(argv[++i], font_size);
         } else
-            usage();
+            usage_short();
     }
 
     read_stdin();

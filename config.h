@@ -1,4 +1,4 @@
-static wchar_t *prompt_text = L"";
+static wchar_t *prompt_text = L"😁";
 static unsigned int font_size = 19;
 static unsigned int lines = 10;
 
