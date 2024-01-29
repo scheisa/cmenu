@@ -1,10 +1,10 @@
 // #ifndef UTILS_H
 // #define UTILS_H
 
-// keycodes
 #include <stdio.h>
 #include <stdlib.h>
 
+// keycodes
 #define ESC 27
 #define ENTR 13
 #define CTRL 17

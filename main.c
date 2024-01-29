@@ -16,6 +16,7 @@
 // TODO's:
 // move some functions to utils.c
 // in match function change handling lowercase case
+// crashing after deleting charcters in input_field
 
 int screen_width, win_height;
 
@@ -40,10 +41,12 @@ int accent_color, bg_color, fg_color_norm, fg_color_sel;
 
 // prompt
 wchar_t **prompt = &prompt_text;
-// size of something
+// size
 struct tagSIZE prompt_size, letter_size;
 
 int case_sensitive = 1;
+// TODO: add -b flag
+int is_at_the_bottom = 0;
 
 // api stuff
 HWND hwnd, input_field, prompt_c;
@@ -75,7 +78,7 @@ draw_matched_items(void)
 }
 
 void
-draw_blank_items()
+draw_blank_items(void)
 {
     for (unsigned int i = 0; i < lines; i++) {
         SetWindowTextW(items_hwnd[i], L"");
@@ -83,7 +86,7 @@ draw_blank_items()
 }
 
 void
-draw_def_items()
+draw_def_items(void)
 {
     for (unsigned int i = 0; i < lines; i++) {
         SetWindowTextW(items_hwnd[i], items[i].str);
@@ -452,7 +455,7 @@ win_proc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
 }
 
 void
-draw_window()
+draw_window(void)
 {
     WNDCLASSA wcl = {0};
     MSG msg;
@@ -499,14 +502,10 @@ draw_window()
 
 // TODO: move?
 void
-read_stdin()
+read_stdin(void)
 {
     const size_t max_buffer_len = 256;
     wchar_t buffer[max_buffer_len];
-
-    items = malloc(sizeof(item) * CHUNK);
-    if (items == NULL)
-        die("ERROR", "unable to allocate memory", 0);
 
     // if nothing was piped
     if (_isatty(_fileno(stdin))) {
@@ -538,6 +537,7 @@ int
 wmain(int argc, wchar_t *argv[])
 {
     setlocale(LC_ALL, "en_US.UTF-8");
+    system("chcp 65001 > NUL");
 
     // colors
     bg_color = hex_to_rgb(SchemeNorm);
@@ -546,6 +546,11 @@ wmain(int argc, wchar_t *argv[])
     fg_color_sel = hex_to_rgb(FontSel);
 
     screen_width = GetSystemMetrics(SM_CXSCREEN);
+
+    items = malloc(sizeof(item) * CHUNK);
+    if (items == NULL)
+        die("ERROR", "unable to allocate memory", 0);
+
 
     // parsing flags
     for (int i = 1; i < argc; i++) {
@@ -564,11 +569,27 @@ wmain(int argc, wchar_t *argv[])
         } else if (!wcscmp(argv[i], L"-f")) {
             // if cannot be converted to integer use standart value from config
             font_size = convert_arg_to_int(argv[++i], font_size);
+        } else if (!wcscmp(argv[i], L"-o")) {
+            for (int j = i + 1; j < argc; j++) {
+                if (items_amount == items_capacity) {
+                    items_capacity += CHUNK;
+                    items = realloc(items, items_capacity * sizeof(item));
+                }
+
+                items[items_amount].str =
+                    malloc(sizeof(wchar_t *) * wcslen(argv[j]));
+                wcscpy(items[items_amount].str, argv[j]);
+                items_amount++;
+
+            }
+
+            break;
         } else
             usage_short();
     }
 
-    read_stdin();
+    if (items_amount == 0)
+        read_stdin();
 
     // amount of shown lines can't be higher then amount of items
     lines = (lines > items_amount) ? items_amount : lines;

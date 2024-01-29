@@ -1,4 +1,4 @@
 # cmenu
-dmenu clone for windows
+[dmenu](https://tools.suckless.org/dmenu) clone for windows
 
 ![screenshot](screenshot.png)
