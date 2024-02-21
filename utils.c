@@ -27,7 +27,7 @@ die(char *prefix, char *msg, int exit_code)
 void
 usage_short(void)
 {
-    die("USAGE", "cmenu [-vi] [-p prompt] [-l lines] [-f font size]", 0);
+    die("USAGE", "cmenu [-vib] [-p prompt] [-l lines] [-f font size]", 0);
 }
 
 int

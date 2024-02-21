@@ -15,10 +15,13 @@
 
 // TODO's:
 // move some functions to utils.c
+// move ui functions to a separate file
 // in match function change handling lowercase case
-// crashing after deleting charcters in input_field
+// crashing after deleting charters in input_field
+// crashing after typing something that matches nothing for too long
+// case insensitivity
 
-int screen_width, win_height;
+int screen_width, screen_height, win_height;
 
 // items
 typedef struct {
@@ -45,7 +48,6 @@ wchar_t **prompt = &prompt_text;
 struct tagSIZE prompt_size, letter_size;
 
 int case_sensitive = 1;
-// TODO: add -b flag
 int is_at_the_bottom = 0;
 
 // api stuff
@@ -204,7 +206,6 @@ return_selection(void)
     quit();
 }
 
-// TODO: get_window_text func
 void
 move_selection_down(void)
 {
@@ -402,7 +403,7 @@ static_color(WPARAM w_param, LPARAM l_param)
 LRESULT
 win_proc(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param)
 {
-    // debugging
+    // debugging kekwait
     // printf("MESSAGE -> \"%d\"\n", msg);
 
     switch (msg) {
@@ -479,7 +480,10 @@ draw_window(void)
     // height of window
     win_height = letter_size.cy + (lines * letter_size.cy);
     // resizing window
-    MoveWindow(hwnd, 0, 0, screen_width, win_height, 1);
+    if (is_at_the_bottom)
+        MoveWindow(hwnd, 0, screen_height - win_height, screen_width, win_height, 1);
+    else
+        MoveWindow(hwnd, 0, 0, screen_width, win_height, 1);
 
     // disabling beeping
     SystemParametersInfo(SPI_SETBEEP, 0, NULL, SPIF_SENDCHANGE);
@@ -500,7 +504,6 @@ draw_window(void)
     }
 }
 
-// TODO: move?
 void
 read_stdin(void)
 {
@@ -546,18 +549,21 @@ wmain(int argc, wchar_t *argv[])
     fg_color_sel = hex_to_rgb(FontSel);
 
     screen_width = GetSystemMetrics(SM_CXSCREEN);
+    screen_height = GetSystemMetrics(SM_CYSCREEN);
 
     items = malloc(sizeof(item) * CHUNK);
     if (items == NULL)
         die("ERROR", "unable to allocate memory", 0);
 
-
     // parsing flags
     for (int i = 1; i < argc; i++) {
         if (!wcscmp(L"-v", argv[i]))
             die("VERSION", VERSION, 0);
-        if (!wcscmp(L"-i", argv[i]))
-            case_sensitive = 0;
+        if (!wcscmp(L"-i", argv[i])) /* case_sensitive = 0; */
+            die("INFO",
+                "case insensitivity is not working as it should for now", 0);
+        if (!wcscmp(L"-b", argv[i]))
+            is_at_the_bottom = 1;
         else if (i + 1 == argc)
             usage_short();
         // flags with parametrs
@@ -580,7 +586,6 @@ wmain(int argc, wchar_t *argv[])
                     malloc(sizeof(wchar_t *) * wcslen(argv[j]));
                 wcscpy(items[items_amount].str, argv[j]);
                 items_amount++;
-
             }
 
             break;
